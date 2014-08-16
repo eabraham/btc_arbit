@@ -33,4 +33,8 @@ Gem::Specification.new do |spec|
   spec.add_dependency "pony"
   spec.add_dependency "tco", "0.1.0"
   spec.add_dependency "bitstamp-rbtc-arbitrage"
+  spec.add_dependency "json"
+  #spec.add_dependency "base64"
+  #spec.add_dependency "openssl"
+  spec.add_dependency "rest_client"
 end

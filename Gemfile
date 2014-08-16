@@ -15,4 +15,8 @@ group :development do
   gem 'codeclimate-test-reporter'
   gem 'hashie'
   gem 'sinatra'
+  gem 'rest_client'
+  gem 'rubysl-base64'
+  gem 'pry'
+  gem 'dotenv-rails'
 end
