@@ -1,7 +1,7 @@
-require "rest_client"
-require "OpenSSL"
-require "Base64"
-require "JSON"
+#require "rest_client"
+#require "OpenSSL"
+#require "Base64"
+#require "JSON"
 
 module RbtcArbitrage
   module Clients
@@ -27,10 +27,10 @@ module RbtcArbitrage
       def balance
 	values   = CGI::escape("nonce=#{Time.now.to_i}")
 
-        sign = hmac_512(values,ENV[ANXPRO_SECRET])
+        sign = hmac_512(values,ENV['ANXPRO_SECRET'])
 
 	headers  = {:content_type => "application/x-www-form-urlencoded",
-		    :rest_key => "\u003C#{ENV[ANXPRO_KEY]}\u003E",
+		    :rest_key => "\u003C#{ENV['ANXPRO_KEY']}\u003E",
 		    :rest_sign => "\u003C#{sign}\u003E"}
 	response = RestClient.post "https://anxpro.com/api/2/api/2/money/info", values, headers
         r_json = JSON.parse(response)
@@ -60,9 +60,9 @@ module RbtcArbitrage
 	volume = action==:buy ? @options[:volume]*10000000000 : @options[:volume]*100000
         values   = CGI::escape("nonce=#{Time.now.to_i}\u0026type=#{bid_ask}\u0026amount_int=#{volume}")
 
-        sign = hmac_512(values,ENV[ANXPRO_SECRET])
+        sign = hmac_512(values,ENV['ANXPRO_SECRET'])
         headers  = {:content_type => "application/x-www-form-urlencoded",
-                    :rest_key => "\u003C#{ENV[ANXPRO_KEY]}\u003E",
+                    :rest_key => "\u003C#{ENV['ANXPRO_KEY']}\u003E",
                     :rest_sign => "\u003C#{sign}\u003E"}
         response = RestClient.post "https://anxpro.com/api/2/BTCUSD/money/order/add/", values, headers
         r_json = JSON.parse(response)
@@ -74,13 +74,18 @@ module RbtcArbitrage
       # `action` is :buy or :sell
       # Returns a Numeric type.
       def price action
-
 	bid_ask=action==:buy ? "bid":"ask"
-	response = RestClient.post "https://anxpro.com/api/2/BTCUSD/money/ticker"
+        
+	#values = CGI::escape("")
+	#sign = hmac_512(values, ENV['ANXPRO_SECRET'])
+	#headers  = {:content_type => "application/x-www-form-urlencoded",
+	#	    :rest_key => "\u003C#{ENV['ANXPRO_KEY']}\u003E",
+	#            :rest_sign => "\u003C#{sign}\u003E"}
+	response = RestClient.get "https://anxpro.com/api/2/BTCUSD/money/ticker"
         r_json = JSON.parse(response)
 
-	if (response["response"] == "success")
-          rate = r_json["data"][action.to_s]["value"]
+	if (r_json["result"] == "success")
+          rate = r_json["data"][action.to_s]["value"].to_f
 	else
           rate = 0
 	end
@@ -92,9 +97,9 @@ module RbtcArbitrage
       def transfer client
         values   = CGI::escape("nonce=#{Time.now.to_i}\u0026address=#{client.address}\u0026amount_int=#{@options[:volume]*10000000000}")
 
-	sign = hmac_512(values,ENV[ANXPRO_SECRET])
+	sign = hmac_512(values,ENV['ANXPRO_SECRET'])
 	headers  = {:content_type => "application/x-www-form-urlencoded",
-	:rest_key => "\u003C#{ENV[ANXPRO_KEY]}\u003E",
+	:rest_key => "\u003C#{ENV['ANXPRO_KEY']}\u003E",
 	:rest_sign => "\u003C#{sign}\u003E"}
 	response = RestClient.post "https://anxpro.com/api/2/money/BTC/send_simple", values, headers
 	r_json = JSON.parse(response)
@@ -110,9 +115,9 @@ module RbtcArbitrage
       def address
 	values   = CGI::escape("nonce=#{Time.now.to_i}")
 
-	sign = hmac_512(values,ENV[ANXPRO_SECRET])
+	sign = hmac_512(values,ENV['ANXPRO_SECRET'])
 	headers  = {:content_type => "application/x-www-form-urlencoded",
-	:rest_key => "\u003C#{ENV[ANXPRO_KEY]}\u003E",
+	:rest_key => "\u003C#{ENV['ANXPRO_KEY']}\u003E",
 	:rest_sign => "\u003C#{sign}\u003E"}
 	response = RestClient.post "https://anxpro.com/api/2/money/BTC/send_simple", values, headers
 	r_json = JSON.parse(response)
