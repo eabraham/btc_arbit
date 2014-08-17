@@ -32,11 +32,11 @@ module RbtcArbitrage
 	headers  = {:content_type => "application/x-www-form-urlencoded",
 		    :rest_key => "\u003C#{ENV['ANXPRO_KEY']}\u003E",
 		    :rest_sign => "\u003C#{sign}\u003E"}
-	response = RestClient.post "https://anxpro.com/api/2/api/2/money/info", values, headers
-        r_json = JSON.parse(response)
+	response = RestClient.post "https://anxpro.com/api/2/money/info", values, headers
+	r_json = JSON.parse(response)
 
 	if (response["response"] == "success")
-	  btc_balance = r_json["data"]["Wallets"]["USD"]["Balance"]["value"].to_f
+	  btc_balance = r_json["data"]["Wallets"]["BTC"]["Balance"]["value"].to_f
           usd_balance = r_json["data"]["Wallets"]["USD"]["Balance"]["value"].to_f
         else
 	  btc_balance = 0.0
@@ -56,6 +56,7 @@ module RbtcArbitrage
 
       # `action` is :buy or :sell
       def trade action
+	price(action) unless @price #memoize
         bid_ask=action==:buy ? "bid":"ask"
 	volume = action==:buy ? @options[:volume]*10000000000 : @options[:volume]*100000
         values   = CGI::escape("nonce=#{Time.now.to_i}\u0026type=#{bid_ask}\u0026amount_int=#{volume}")
@@ -74,6 +75,7 @@ module RbtcArbitrage
       # `action` is :buy or :sell
       # Returns a Numeric type.
       def price action
+	return @price if @price #memoize
 	bid_ask=action==:buy ? "bid":"ask"
         
 	#values = CGI::escape("")
