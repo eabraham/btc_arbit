@@ -6,7 +6,7 @@ module RbtcArbitrage
       def balance
         return @balance if @balance
         balances = Bitstamp.balance
-        @balance = [balances[0].to_f, balances[1].to_f]
+        @balance = [balances["btc_available"].to_f, balances["usd_available"].to_f]
       end
 
       def validate_env
