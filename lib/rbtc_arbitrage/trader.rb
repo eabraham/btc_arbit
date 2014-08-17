@@ -23,10 +23,19 @@ module RbtcArbitrage
       set_key opts, :live, false
       set_key opts, :repeat, nil
       set_key opts, :notify, false
-      exchange = opts[:buyer] || :bitstamp
-      @buy_client = client_for_exchange(exchange)
-      exchange = opts[:seller] || :campbx
-      @sell_client = client_for_exchange(exchange)
+      exchanges = opts[:buyer].split(",") || [:bitstamp]
+      @buy_clients = exchanges.map do |exchange|
+        client = client_for_exchange(exchange)
+        client.validate_env
+	client
+      end
+      exchanges = opts[:seller].split(",") || [:campbx]
+      @sell_clients = exchanges.map do |exchange|
+        client = client_for_exchange(exchange)
+	client.validate_env
+	client
+      end
+      selectExchanges
       self
     end
 
@@ -53,6 +62,31 @@ module RbtcArbitrage
       self
     end
 
+    def selectExchanges
+      @buy_client = @buy_clients[0]
+      @sell_client = @sell_clients[0]
+      logger.info "Exchanges considered for Buy:" if @options[:verbose]
+      @buy_clients.each do |exchange|
+	logger.info "#{exchange.exchange} balance: #{exchange.balance[1]} USD buy price: #{exchange.price(:buy)}" if @options[:verbose]
+        if exchange.balance[1] > @options[:volume] * exchange.price(:buy) * 1.001
+          #sufficuent USD to trade
+          if @buy_client.price > exchange.price(:buy)
+            @buy_client=exchange
+	  end
+	end
+      end
+      logger.info "Exchanges considered for Sell:" if @options[:verbose]
+      @sell_clients.each do |exchange|
+	logger.info "#{exchange.exchange} balance: #{exchange.balance[0]} BTC sell price: #{exchange.price(:sell)}" if @options[:verbose]
+        if exchange.balance[0] > @options[:volume] * exchange.price(:sell) * 1.001
+          #sufficuent BTC to trade
+          if @sell_client.price < exchange.price(:sell)
+            @sell_client=exchange
+	  end
+        end
+      end
+    end
+
     def trade_again
       sleep @options[:repeat]
       logger.info " - " if @options[:verbose]
@@ -63,7 +97,6 @@ module RbtcArbitrage
 
     def execute_trade
       fetch_prices unless @paid
-      validate_env
       raise SecurityError, "--live flag is false. Not executing trade." unless options[:live]
       get_balance
       if @percent > @options[:cutoff]
@@ -74,7 +107,7 @@ module RbtcArbitrage
     end
 
     def fetch_prices
-      logger.info "Fetching exchange rates" if @options[:verbose]
+      logger.info "Fetching exchange rates with sufficient funds" if @options[:verbose]
       buyer[:price] = @buy_client.price(:buy)
       seller[:price] = @sell_client.price(:sell)
       prices = [buyer[:price], seller[:price]]
