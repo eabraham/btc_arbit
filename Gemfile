@@ -19,4 +19,5 @@ group :development do
   gem 'rubysl-base64'
   gem 'pry'
   gem 'dotenv-rails'
+  gem 'kraken_ruby', '~> 0.4.2'
 end

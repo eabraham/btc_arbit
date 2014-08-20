@@ -89,6 +89,10 @@ GEM
     i18n (0.6.9)
     json (1.8.1)
     jwt (1.0.0)
+    kraken_ruby (0.4.2)
+      addressable
+      hashie
+      httparty
     listen (2.4.0)
       celluloid (>= 0.15.2)
       rb-fsevent (>= 0.9.3)
@@ -186,6 +190,7 @@ DEPENDENCIES
   guard
   guard-rspec
   hashie
+  kraken_ruby (~> 0.4.2)
   pry
   rbtc_arbitrage!
   rest_client
