@@ -23,20 +23,20 @@ module RbtcArbitrage
       set_key opts, :live, false
       set_key opts, :repeat, nil
       set_key opts, :notify, false
-      exchanges = opts[:buyer].split(",") || [:bitstamp]
-      @buy_clients = exchanges.map do |exchange|
-        client = client_for_exchange(exchange)
+      @buy_exchanges = opts[:buyer].split(",") || [:bitstamp]
+      @buy_clients = getExchanges(@buy_exchanges)
+      @sell_exchanges = opts[:seller].split(",") || [:campbx]
+      @sell_clients = getExchanges(@sell_exchanges)
+      selectExchanges
+      self
+    end
+
+    def getExchanges(exchange_names)
+      exchange_names.map do |exchange|
+	client = client_for_exchange(exchange)
         client.validate_env
 	client
       end
-      exchanges = opts[:seller].split(",") || [:campbx]
-      @sell_clients = exchanges.map do |exchange|
-        client = client_for_exchange(exchange)
-	client.validate_env
-	client
-      end
-      selectExchanges
-      self
     end
 
     def set_key config, key, default
@@ -67,20 +67,20 @@ module RbtcArbitrage
       @sell_client = @sell_clients[0]
       logger.info "Exchanges considered for Buy:" if @options[:verbose]
       @buy_clients.each do |exchange|
-	logger.info "#{exchange.exchange} balance: #{exchange.balance[1]} USD buy price: #{exchange.price(:buy)}" if @options[:verbose]
-        if exchange.balance[1] > @options[:volume] * exchange.price(:buy) * 1.001
+	logger.info "#{exchange.exchange} balance: $#{color(exchange.balance[1])} USD buy price: $#{color(exchange.price(:buy))}" if @options[:verbose]
+	if exchange.balance[1] > @options[:volume] * exchange.price(:buy) * 1.001
           #sufficuent USD to trade
-          if @buy_client.price > exchange.price(:buy)
+          if exchange.price(:buy) < @buy_client.price(:buy)
             @buy_client=exchange
 	  end
 	end
       end
       logger.info "Exchanges considered for Sell:" if @options[:verbose]
       @sell_clients.each do |exchange|
-	logger.info "#{exchange.exchange} balance: #{exchange.balance[0]} BTC sell price: #{exchange.price(:sell)}" if @options[:verbose]
-        if exchange.balance[0] > @options[:volume] * exchange.price(:sell) * 1.001
+	logger.info "#{exchange.exchange} balance: #{color(exchange.balance[0])} BTC sell price: #{color(exchange.price(:sell))}" if @options[:verbose]
+	if exchange.balance[0] > @options[:volume] * exchange.price(:sell) * 1.001
           #sufficuent BTC to trade
-          if @sell_client.price < exchange.price(:sell)
+          if exchange.price(:sell) > @sell_client.price(:sell)
             @sell_client=exchange
 	  end
         end
@@ -90,9 +90,16 @@ module RbtcArbitrage
     def trade_again
       sleep @options[:repeat]
       logger.info " - " if @options[:verbose]
-      @buy_client = @buy_client.class.new(@options)
-      @sell_client = @sell_client.class.new(@options)
-      trade
+      begin
+        @buy_clients = getExchanges(@buy_exchanges)
+        @sell_clients = getExchanges(@sell_exchanges)
+        selectExchanges
+        #@buy_client = @buy_client.class.new(@options)
+        #@sell_client = @sell_client.class.new(@options)
+        trade
+      rescue Exception => e
+        trade_again
+      end
     end
 
     def execute_trade

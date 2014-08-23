@@ -6,6 +6,7 @@ module RbtcArbitrage
     def initialize config={}
       @options = config
       @options = {}
+      @price = {}
       set_key config, :volume, 0.01
       set_key config, :cutoff, 2
       set_key config, :logger, Logger.new(STDOUT)

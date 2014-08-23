@@ -190,7 +190,7 @@ DEPENDENCIES
   guard
   guard-rspec
   hashie
-  kraken_ruby (~> 0.4.2)
+  kraken_ruby
   pry
   rbtc_arbitrage!
   rest_client
