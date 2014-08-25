@@ -14,37 +14,40 @@ module RbtcArbitrage
         :lakebtc
       end
 
-      def hmac_512(msg, sec)
-	digest = OpenSSL::Digest::Digest.new( 'sha512' )
-        sec = Base64.decode64(sec)
-        hmac = OpenSSL::HMAC.digest(digest, sec, msg)
-	Base64.encode64( hmac ).chomp.gsub( /\n/, '' )
+      def hmac_512(msg)
+	hmac = HMAC::SHA1.new(ENV['LAKEBTC_KEY'])
+	signature = hmac.update(msg)
+	Base64.encode64("#{ENV['LAKEBTC_ACCESS_KEY']}:#{hmac.update(msg).to_s}").chomp.gsub( /\n/, '' )
       end
 
       # Returns an array of Floats.
       # The first element is the balance in BTC;
       # The second is in USD.
       def balance
-	values   = CGI::escape("nonce=#{Time.now.to_i}")
+        #return [100,100]
+	tonce=DateTime.now.strftime('%Q')
+	id = 1
+	values   = ("tonce=#{tonce}&"+
+			        "accesskey=#{ENV['LAKEBTC_ACCESS_KEY']}&"+
+                                "requestmethod=post&"+
+                                "id=#{id}&"+
+                                "method=getAccountInfo&"+
+                                "params=")
+        sign = hmac_512(values)
 
-        sign = hmac_512(values,ENV['ANXPRO_SECRET'])
-
-	headers  = {:content_type => "application/x-www-form-urlencoded",
-		    :rest_key => "\u003C#{ENV['ANXPRO_KEY']}\u003E",
-		    :rest_sign => "\u003C#{sign}\u003E"}
-	response = RestClient.post "https://anxpro.com/api/2/money/info", values, headers
+	headers  = {'Json-Rpc-Tonce' => tonce,
+		    'Authorization'=> "Basic #{sign}"}
+	response = RestClient.post("https://www.LakeBTC.com/api_v1", {params:[],method:"getAccountInfo",id:id}.to_json, headers)
 	r_json = JSON.parse(response)
-
-	if (response["response"] == "success")
-	  btc_balance = r_json["data"]["Wallets"]["BTC"]["Balance"]["value"].to_f
-          usd_balance = r_json["data"]["Wallets"]["USD"]["Balance"]["value"].to_f
+	if (r_json.keys.include?("balance"))
+      	  btc_balance = r_json["balance"]["BTC"].to_f
+          usd_balance = r_json["balance"]["USD"].to_f
         else
 	  btc_balance = 0.0
 	  usd_balance = 0.0
 	end
 
         return [btc_balance, usd_balance]
-        return [100,100]
       end
 
       def interface
@@ -52,25 +55,32 @@ module RbtcArbitrage
 
       # Configures the client's API keys.
       def validate_env
-        validate_keys :anxpro_key, :anxpro_secret
+        validate_keys :lakebtc_access_key, :lakebtc_key
       end
 
       # `action` is :buy or :sell
       def trade action
-	price(action) unless @price #memoize
-        bid_ask=action==:buy ? "bid":"ask"
-	volume = action==:buy ? @options[:volume]*10000000000 : @options[:volume]*100000
-        values   = CGI::escape("nonce=#{Time.now.to_i}\u0026type=#{bid_ask}\u0026amount_int=#{volume}")
+	bid_ask=action==:buy ? :ask : :bid
+	p = @price[:bid] if @price && @price[:bid] #memoize
+	p = @price[:ask] if @price && @price[:ask] #memoize
+	p = price(action) unless p
+        bid_ask=action==:buy ? "buyOrder":"sellOrder"
+	volume = @options[:volume]
 
-        sign = hmac_512(values,ENV['ANXPRO_SECRET'])
-        headers  = {:content_type => "application/x-www-form-urlencoded",
-                    :rest_key => "\u003C#{ENV['ANXPRO_KEY']}\u003E",
-                    :rest_sign => "\u003C#{sign}\u003E"}
-        response = RestClient.post "https://anxpro.com/api/2/BTCUSD/money/order/add/", values, headers
-        r_json = JSON.parse(response)
+        tonce=DateTime.now.strftime('%Q')
+        id = 1
+	values   = ("tonce=#{tonce}&"+
+                    "accesskey=#{ENV['LAKEBTC_ACCESS_KEY']}&"+
+		    "requestmethod=post&"+
+		    "id=#{id}&"+
+		    "method=#{bid_ask}&"+
+		    "params=#{[p,volume,'USD'].split(',')}")
+	sign = hmac_512(values)
 
-        if (response["response"] == "success")
-        end
+	headers  = {'Json-Rpc-Tonce' => tonce,
+		    'Authorization'=> "Basic #{sign}"}
+	response = RestClient.post("https://www.LakeBTC.com/api_v1", {params:[p,volume,'USD'],method:"#{bid_ask}",id:id}.to_json, headers)
+
       end
 
       # `action` is :buy or :sell
@@ -82,11 +92,11 @@ module RbtcArbitrage
         response = RestClient.get "https://www.LakeBTC.com/api_v1/ticker"
 	r_json = JSON.parse(response)
 
-        if (r_json.keys.includes?("USD"))
+        if (r_json.keys.include?("USD"))
 	  if bid_ask==:ask
-            rate = r_json["XXBTZUSD"]["a"][0].to_f
+            rate = r_json["USD"]["ask"].to_f
           elsif bid_ask==:bid
-            rate = r_json["XXBTZUSD"]["b"][0].to_f
+            rate = r_json["USD"]["bid"].to_f
           end
         else
           rate = 0
@@ -98,16 +108,10 @@ module RbtcArbitrage
       # Transfers BTC to the address of a different
       # exchange.
       def transfer client
-        values   = CGI::escape("nonce=#{Time.now.to_i}\u0026address=#{client.address}\u0026amount_int=#{@options[:volume]*10000000000}")
-
-	sign = hmac_512(values,ENV['ANXPRO_SECRET'])
-	headers  = {:content_type => "application/x-www-form-urlencoded",
-	:rest_key => "\u003C#{ENV['ANXPRO_KEY']}\u003E",
-	:rest_sign => "\u003C#{sign}\u003E"}
-	response = RestClient.post "https://anxpro.com/api/2/money/BTC/send_simple", values, headers
-	r_json = JSON.parse(response)
-
-	if (response["response"] == "success")
+        if @options[:verbose]
+          error = "Kraken does not have a 'transfer' API.\n"
+          error << "You must transfer bitcoin manually."
+	  @options[:logger].error error
 	end
       end
 
@@ -116,23 +120,28 @@ module RbtcArbitrage
       # remove this method and set the ENV
       # variable [this-exchange-name-in-caps]_ADDRESS
       def address
-	values   = CGI::escape("nonce=#{Time.now.to_i}")
 
-	sign = hmac_512(values,ENV['ANXPRO_SECRET'])
-	headers  = {:content_type => "application/x-www-form-urlencoded",
-	:rest_key => "\u003C#{ENV['ANXPRO_KEY']}\u003E",
-	:rest_sign => "\u003C#{sign}\u003E"}
-	response = RestClient.post "https://anxpro.com/api/2/money/BTC/send_simple", values, headers
+        tonce=DateTime.now.strftime('%Q')
+        id = 1
+        values   = ("tonce=#{tonce}&"+
+	            "accesskey=#{ENV['LAKEBTC_ACCESS_KEY']}&"+
+		    "requestmethod=post&"+
+		    "id=#{id}&"+
+		    "method=getAccountInfo&"+
+		    "params=")
+	sign = hmac_512(values)
+							
+        headers  = {'Json-Rpc-Tonce' => tonce,
+		    'Authorization'=> "Basic #{sign}"}
+	response = RestClient.post("https://www.LakeBTC.com/api_v1", {params:[],method:"getAccountInfo",id:id}.to_json, headers)
 	r_json = JSON.parse(response)
-
-	if (response["response"] == "success")
-	  btc_address = response["result"]["data"]["addr"]
-        else
+	if (r_json.keys.include?("profile"))
+          btc_address = r_json["profile"]["btc_deposit_addres"]
+	else
 	  btc_address = ""
 	end
 
 	return btc_address
-
       end
     end
   end
