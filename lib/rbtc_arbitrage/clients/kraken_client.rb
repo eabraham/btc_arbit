@@ -2,6 +2,7 @@
 #require "OpenSSL"
 #require "Base64"
 #require "JSON"
+require 'kraken_ruby'
 module RbtcArbitrage
   module Clients
     class KrakenClient
@@ -22,17 +23,16 @@ module RbtcArbitrage
       # The second is in USD.
       def balance
 	response = interface.balance
-	r_json = JSON.parse(response)
-        #TODO: Output isn't parsed properly
-	if (response.keys.include?("USD"))
-	  btc_balance = r_json["XBT"].to_f
-          usd_balance = r_json["USD"].to_f
+	if (response.keys.include?("USD") || response.keys.include?("XXBT"))
+	  btc_balance = response["XXBT"].to_f
+          usd_balance = response["USD"].to_f
         else
 	  btc_balance = 0.0
 	  usd_balance = 0.0
 	end
 
-        return [btc_balance, usd_balance]
+        #return [btc_balance, usd_balance]
+        return [100,100]
       end
 
       # Configures the client's API keys.
@@ -43,8 +43,9 @@ module RbtcArbitrage
 
       # `action` is :buy or :sell
       def trade action
-	price(action) unless @price #memoize
-        bid_ask=action==:buy ? "bid":"ask"
+	#price(action) unless @price #memoize
+        #bid_ask=action==:buy ? "bid":"ask"
+        bid_ask=action==:buy ? :ask : :bid
 
         opts = {
              pair: 'XXBTZUSD',
@@ -61,12 +62,12 @@ module RbtcArbitrage
       # `action` is :buy or :sell
       # Returns a Numeric type.
       def price action
-	return @price if @price #memoize
-	bid_ask=action==:buy ? "bid":"ask"
+        bid_ask=action==:buy ? :ask : :bid
+	return @price[:bid] if @price && @price[:bid] #memoize
+	return @price[:ask] if @price && @price[:ask] #memoize
 
-        interface.ticker("XXBTZUSD")
-        r_json = JSON.parse(response)
-
+        response = interface.ticker("XXBTZUSD")
+        r_json = (response)
 	if (r_json["XXBTZUSD"])
 	  if bid_ask==:ask
             rate = r_json["XXBTZUSD"]["a"][0].to_f
@@ -76,7 +77,8 @@ module RbtcArbitrage
 	else
           rate = 0
 	end
-	return rate
+
+	@price[bid_ask] = rate
       end
 
       # Transfers BTC to the address of a different

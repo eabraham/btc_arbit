@@ -23,12 +23,10 @@ module RbtcArbitrage
       end
 
       def price action
-        return @price if @price
-        action = {
-          buy: :ask,
-          sell: :bid,
-        }[action]
-        @price = Bitstamp.ticker.send(action).to_f
+        bid_ask=action==:buy ? :ask : :bid
+	return @price[:bid] if @price && @price[:bid] #memoize
+	return @price[:ask] if @price && @price[:ask] #memoize
+        @price[bid_ask] = Bitstamp.ticker.send(bid_ask).to_f
       end
 
       def trade action
