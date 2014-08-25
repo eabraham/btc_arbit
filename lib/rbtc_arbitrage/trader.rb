@@ -78,7 +78,7 @@ module RbtcArbitrage
       logger.info "Exchanges considered for Sell:" if @options[:verbose]
       @sell_clients.each do |exchange|
 	logger.info "#{exchange.exchange} balance: #{color(exchange.balance[0])} BTC sell price: #{color(exchange.price(:sell))}" if @options[:verbose]
-	if exchange.balance[0] > @options[:volume] * exchange.price(:sell) * 1.001
+	if exchange.balance[0] > @options[:volume] * 1.001
           #sufficuent BTC to trade
           if exchange.price(:sell) > @sell_client.price(:sell)
             @sell_client=exchange
