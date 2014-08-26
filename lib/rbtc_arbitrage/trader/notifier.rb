@@ -43,8 +43,6 @@ module RbtcArbitrage
         lower_ex = @buy_client.exchange.to_s.capitalize
         higher_ex = @sell_client.exchange.to_s.capitalize
         <<-eos
-        Update from your friendly rbtc_arbitrage trader:
-
         -------------------
 
         #{lower_ex}: $#{buyer[:price].round(2)}
@@ -61,7 +59,6 @@ module RbtcArbitrage
 
         -------------------
 
-        https://github.com/hstove/rbtc_arbitrage
         eos
       end
     end

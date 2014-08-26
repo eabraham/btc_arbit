@@ -16,7 +16,7 @@ module RbtcArbitrage
       @options = {}
       set_key opts, :volume, 0.01
       set_key opts, :cutoff, 2
-      default_logger = Logger.new($stdout)
+      default_logger = Logger.new("log.log")#Logger.new($stdout)
       default_logger.datetime_format = "%^b %e %Y %l:%M:%S %p %z"
       set_key opts, :logger, default_logger
       set_key opts, :verbose, true
