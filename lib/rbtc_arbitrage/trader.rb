@@ -18,7 +18,9 @@ module RbtcArbitrage
       set_key opts, :cutoff, 2
       default_logger = Logger.new("log.log")#Logger.new($stdout)
       default_logger.datetime_format = "%^b %e %Y %l:%M:%S %p %z"
-      set_key opts, :logger, default_logger
+      logger = Logger.new($stdout)
+      logger.datetime_format = "%^b %e %Y %l:%M:%S %p %z"
+      set_key opts, :logger, ENV['LOGFILE']!="true" ? logger : default_logger
       set_key opts, :verbose, true
       set_key opts, :live, false
       set_key opts, :repeat, nil
@@ -159,8 +161,8 @@ module RbtcArbitrage
     private
 
     def calculate_profit
-      @paid = buyer[:price] * 1.006 * @options[:volume]
-      @received = seller[:price] * 0.994 * @options[:volume]
+      @paid = buyer[:price] * 1.005 * @options[:volume]
+      @received = seller[:price] * 0.995 * @options[:volume]
       @percent = ((received/@paid - 1) * 100).round(2)
     end
 
