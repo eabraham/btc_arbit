@@ -163,7 +163,7 @@ module RbtcArbitrage
     def calculate_profit
       @paid = buyer[:price] * 1.005 * @options[:volume]
       @received = seller[:price] * 0.995 * @options[:volume]
-      @percent = ((received/@paid - 1) * 100).round(2)
+      @percent = ((@received/@paid - 1) * 100).round(2)
     end
 
     def buy_and_transfer!
