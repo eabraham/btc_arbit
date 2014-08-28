@@ -50,10 +50,10 @@ module RbtcArbitrage
       log_info if options[:verbose]
 
       if options[:live] && options[:cutoff] > @percent
-        raise SecurityError, "Exiting because real profit (#{@percent.round(2)}%) is less than cutoff (#{options[:cutoff].round(2)}%)"
+        logger.info "Real profit (#{@percent.round(2)}%) is less than cutoff (#{options[:cutoff].round(2)}%)"
+      else
+        execute_trade if options[:live]
       end
-
-      execute_trade if options[:live]
 
       notify
 
