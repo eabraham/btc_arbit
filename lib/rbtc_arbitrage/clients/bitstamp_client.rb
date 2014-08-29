@@ -30,20 +30,21 @@ module RbtcArbitrage
       end
 
       def trade action
+        bid_ask=action==:buy ? :ask : :bid
         price(action) unless @price #memoize
         multiple = {
           buy: 1,
           sell: -1,
         }[action]
         bitstamp_options = {
-          price: (@price + 0.001 * multiple),
-          amount: @options[:volume],
+          "price" => (@price[bid_ask] + 0.001 * multiple).round(2),
+          "amount" => @options[:volume]
         }
-        Bitstamp.orders.send(action, bitstamp_options)
+        response=Bitstamp.orders.send(action, bitstamp_options)
       end
 
       def transfer other_client
-        Bitstamp.transfer(@options[:volume], other_client.address)
+        Bitstamp.withdraw_bitcoins({:amount=>@options[:volume], :address=>other_client.address})
       end
     end
   end
