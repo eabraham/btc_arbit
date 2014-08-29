@@ -23,7 +23,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "rake", "10.1.1"
 
   spec.add_dependency "faraday", "0.8.8"
-  # spec.add_dependency "bitstamp"
+  spec.add_dependency "bitstamp"#, {:git => "http://github.com/kojnapp/bitstamp.git"}
   spec.add_dependency "activemodel", ">= 3.1"
   spec.add_dependency "activesupport", ">= 3.1"
   spec.add_dependency "thor"
@@ -32,7 +32,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "coinbase", '2.1.0'
   spec.add_dependency "pony"
   spec.add_dependency "tco", "0.1.0"
-  spec.add_dependency "bitstamp-rbtc-arbitrage"
+  #spec.add_dependency "bitstamp-rbtc-arbitrage"
   spec.add_dependency "json"
   #spec.add_dependency "base64"
   #spec.add_dependency "openssl"
