@@ -56,7 +56,7 @@ module RbtcArbitrage
 	p = @price[:bid] if @price && @price[:bid] #memoize
 	p = @price[:ask] if @price && @price[:ask] #memoize
 	p = price(action) unless p
-        bid_ask=action==:buy ? "S":"B" #reverse because its BTCUSD pair
+        bid_ask=action==:buy ? "B":"S" #reverse because its BTCUSD pair
 	volume = @options[:volume]
 
         params = {'username' => ENV['ROCK_USERNAME'],
