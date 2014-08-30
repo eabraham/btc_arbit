@@ -16,6 +16,9 @@ module RbtcArbitrage
       @options = {}
       set_key opts, :volume, 0.01
       set_key opts, :cutoff, 2
+
+      #@options[:cutoff] = -2
+
       default_logger = Logger.new("log.log")#Logger.new($stdout)
       default_logger.datetime_format = "%^b %e %Y %l:%M:%S %p %z"
       logger = Logger.new($stdout)
@@ -48,7 +51,6 @@ module RbtcArbitrage
     def trade
       fetch_prices
       log_info if options[:verbose]
-
       if options[:live] && options[:cutoff] > @percent
         logger.info "Real profit (#{@percent.round(2)}%) is less than cutoff (#{options[:cutoff].round(2)}%)"
       else
@@ -168,14 +170,47 @@ module RbtcArbitrage
 
     def buy_and_transfer!
       if @paid > buyer[:usd] || @options[:volume] > seller[:btc]
-        raise SecurityError, "Not enough funds. Exiting."
+        logger.info "Not enough funds. Cancelling." if options[:verbose]
       else
         logger.info "Trading live!" if options[:verbose]
-        @buy_client.buy
-        @sell_client.sell
-        @buy_client.transfer @sell_client
+        retries = 5
+	#perform action on exchnage with lowest volume first
+	#confirm that trade completes
+	#If trade does not complete in 10 seconds cancel order and prevent other side of arbitrage
+	if @buy_client.trade_volume <= @sell_client.trade_volume
+          id = @buy_client.buy
+	  (1..retries).each do |attempt|
+            if !@buy_client.open_orders.include?(id)
+	      @sell_client.sell
+	      @buy_client.transfer @sell_client
+              break
+            end
+            if attempt ==retries
+              @buy_client.cancel_order id
+	      logger.info "failed to fill buy order at #{@buy_client.exchange}"
+	    else
+	      logger.info "Attempt #{attempt}/#{retries}: buy order #{id} still opening, waiting for close to sell"
+              sleep(1)
+	    end
+	  end
+	else
+          id = @sell_client.sell
+	  (1..retries).each do |attempt|
+            if !@sell_client.open_orders.include?(id)
+              @buy_client.buy
+	      @buy_client.transfer @sell_client
+	      break
+	    end
+	    if attempt == retries
+              @sell_client.cancel_order id
+              logger.info "failed to fill buy order at #{@sell_client.exchange}"
+	    else
+	      logger.info "Attempt #{attempt}/#{retries}: sell order #{id} still opening, waiting for close to buy"
+              sleep(1)
+	    end
+	  end
+	end
       end
     end
-
   end
 end

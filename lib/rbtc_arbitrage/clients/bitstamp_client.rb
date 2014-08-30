@@ -22,11 +22,30 @@ module RbtcArbitrage
         :bitstamp
       end
 
+      def open_orders
+        orders = Bitstamp.orders.all
+	return orders.map{|a| a.send(:id)}
+      end
+
+      def cancel_order id
+        Bitstamp.orders.find(id).cancel!
+      end
+
       def price action
         bid_ask=action==:buy ? :ask : :bid
-	return @price[:bid] if @price && @price[:bid] #memoize
-	return @price[:ask] if @price && @price[:ask] #memoize
-        @price[bid_ask] = Bitstamp.ticker.send(bid_ask).to_f
+	return @price[:bid] if @price && @price[:bid] && bid_ask==:bid #memoize
+	return @price[:ask] if @price && @price[:ask] && bid_ask==:ask #memoize
+	ticker = Bitstamp.ticker
+        @price[:bid] = ticker.send(:bid).to_f
+	@price[:ask] = ticker.send(:ask).to_f
+	@trade_vol = ticker.send(:volume).to_f
+        return @price[bid_ask]
+      end
+
+      def trade_volume
+        return @trade_vol if !@trade_vol
+	price :buy
+	return @trade_vol
       end
 
       def trade action
@@ -41,6 +60,7 @@ module RbtcArbitrage
           "amount" => @options[:volume]
         }
         response=Bitstamp.orders.send(action, bitstamp_options)
+        return response.send(:id)
       end
 
       def transfer other_client

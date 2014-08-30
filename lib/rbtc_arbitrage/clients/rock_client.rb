@@ -45,6 +45,28 @@ module RbtcArbitrage
       def interface
       end
 
+      def open_orders
+        params = {'username' => ENV['ROCK_USERNAME'],
+	          'password' => ENV['ROCK_PASSWORD'],
+	          'api_key'  => ENV['ROCK_KEY']}
+
+        response = RestClient.post("https://www.therocktrading.com/api/get_orders", params, {})
+        r_json = JSON.parse(response)
+	if (r_json.keys.include?("result"))
+          return r_json["result"]["orders"].map{|a| a["id"]}
+        else
+          return [-999]
+	end
+      end
+
+      def cancel_order id
+        params = {'username' => ENV['ROCK_USERNAME'],
+  	          'password' => ENV['ROCK_PASSWORD'],
+	          'api_key'  => ENV['ROCK_KEY'],
+                  'order_id' => id }
+        response = RestClient.post("https://www.therocktrading.com/api/cancel_order", params, {})
+      end
+
       # Configures the client's API keys.
       def validate_env
         validate_keys :rock_key, :rock_username, :rock_password
@@ -69,7 +91,8 @@ module RbtcArbitrage
 	         }
 
 	response = RestClient.post("https://www.therocktrading.com/api/place_order", params, {})
-
+        r_json=JSON.parse(response)
+	return r_json["result"][0]["order_id"]
       end
 
       # `action` is :buy or :sell
@@ -83,11 +106,19 @@ module RbtcArbitrage
         if (r_json.keys.include?("result") && r_json["result"].keys.include?("tickers"))
           @price[:ask]=r_json["result"]["tickers"]["BTCUSD"]["ask"].to_f
 	  @price[:bid]=r_json["result"]["tickers"]["BTCUSD"]["bid"].to_f
+	  @trade_vol = r_json["result"]["tickers"]["BTCUSD"]["volume"].to_f
         else
           @price = {:ask=>0, :bid=>0}
-        end
+          @trade_vol = 0
+	end
 
 	@price[bid_ask]
+      end
+
+      def trade_volume
+        return @trade_vol if !@trade_vol.nil?
+        price :buy
+        return @trade_vol
       end
 
       # Transfers BTC to the address of a different
@@ -96,7 +127,7 @@ module RbtcArbitrage
         if @options[:verbose]
           error = "Rock Trading does not have a 'transfer' API.\n"
           error << "You must transfer bitcoin manually."
-	  @options[:logger].error error
+	  @options[:logger].info error
 	end
       end
 
