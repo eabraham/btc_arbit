@@ -75,7 +75,7 @@ module RbtcArbitrage
       # `action` is :buy or :sell
       def trade action
         bid_ask=action==:buy ? :ask : :bid
-binding.pry
+
 	p = @price[:bid] if @price && @price[:bid] && bid_ask==:bid#memoize
 	p = @price[:ask] if @price && @price[:ask] && bid_ask==:ask#memoize
 	p = price(action) unless p

@@ -60,12 +60,12 @@ module RbtcArbitrage
           "amount" => @options[:volume]
         }
         response=Bitstamp.orders.send(action, bitstamp_options)
-        binding.pry
 	return response.send(:id)
       end
 
       def transfer other_client
-        Bitstamp.withdraw_bitcoins({:amount=>@options[:volume], :address=>other_client.address})
+        info= Bitstamp.withdraw_bitcoins({:amount=>@options[:volume], :address=>other_client.address})
+        logger.info info
       end
     end
   end

@@ -169,12 +169,6 @@ module RbtcArbitrage
     end
 
     def buy_and_transfer!
-      if @options[:volume]*@buy_client.price(:buy) < 5
-        @options[:volume] = 5/@buy_client.price(:buy)
-      end
-      if @options[:volume]*@sell_client.price(:sell) < 5
-        @options[:volume] = 5/@sell_client.price(:sell)
-      end
       if @paid > buyer[:usd] || @options[:volume] > seller[:btc]
         logger.info "Not enough funds. Cancelling." if options[:verbose]
       else
@@ -190,7 +184,8 @@ module RbtcArbitrage
 	      logger.info "#{@options[:volume]} Bitcoins bought at #{@buy_client.exchange}"
 	      @sell_client.sell
               logger.info "#{@options[:volume]} Bitcoins sold at #{@sell_client.exchange}"
-	      @buy_client.transfer @sell_client
+	      sleep(5) 
+              @buy_client.transfer @sell_client
               logger.info "Transferring bitcoins to #{@sell_client.exchange}"
 	      break
             end
@@ -209,6 +204,7 @@ module RbtcArbitrage
 	      logger.info "#{@options[:volume]} Bitcoins sold at #{@sell_client.exchange}"
               @buy_client.buy
 	      logger.info "#{@options[:volume]} Bitcoins bought at #{@buy_client.exchange}"
+              sleep(5)
 	      @buy_client.transfer @sell_client
 	      logger.info "Transferring bitcoins to #{@sell_client.exchange}"
 	      break
