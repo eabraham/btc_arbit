@@ -169,11 +169,17 @@ module RbtcArbitrage
     end
 
     def buy_and_transfer!
+      if @options[:volume]*@buy_client.price(:buy) < 5
+        @options[:volume] = 5/@buy_client.price(:buy)
+      end
+      if @options[:volume]*@sell_client.price(:sell) < 5
+        @options[:volume] = 5/@sell_client.price(:sell)
+      end
       if @paid > buyer[:usd] || @options[:volume] > seller[:btc]
         logger.info "Not enough funds. Cancelling." if options[:verbose]
       else
         logger.info "Trading live!" if options[:verbose]
-        retries = 5
+        retries = 20
 	#perform action on exchnage with lowest volume first
 	#confirm that trade completes
 	#If trade does not complete in 10 seconds cancel order and prevent other side of arbitrage
@@ -181,9 +187,12 @@ module RbtcArbitrage
           id = @buy_client.buy
 	  (1..retries).each do |attempt|
             if !@buy_client.open_orders.include?(id)
+	      logger.info "#{@options[:volume]} Bitcoins bought at #{@buy_client.exchange}"
 	      @sell_client.sell
+              logger.info "#{@options[:volume]} Bitcoins sold at #{@sell_client.exchange}"
 	      @buy_client.transfer @sell_client
-              break
+              logger.info "Transferring bitcoins to #{@sell_client.exchange}"
+	      break
             end
             if attempt ==retries
               @buy_client.cancel_order id
@@ -197,8 +206,11 @@ module RbtcArbitrage
           id = @sell_client.sell
 	  (1..retries).each do |attempt|
             if !@sell_client.open_orders.include?(id)
+	      logger.info "#{@options[:volume]} Bitcoins sold at #{@sell_client.exchange}"
               @buy_client.buy
+	      logger.info "#{@options[:volume]} Bitcoins bought at #{@buy_client.exchange}"
 	      @buy_client.transfer @sell_client
+	      logger.info "Transferring bitcoins to #{@sell_client.exchange}"
 	      break
 	    end
 	    if attempt == retries

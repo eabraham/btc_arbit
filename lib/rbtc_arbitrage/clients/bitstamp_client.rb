@@ -60,7 +60,8 @@ module RbtcArbitrage
           "amount" => @options[:volume]
         }
         response=Bitstamp.orders.send(action, bitstamp_options)
-        return response.send(:id)
+        binding.pry
+	return response.send(:id)
       end
 
       def transfer other_client
