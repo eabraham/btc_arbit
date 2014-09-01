@@ -186,7 +186,8 @@ module RbtcArbitrage
               logger.info "#{@options[:volume]} Bitcoins sold at #{@sell_client.exchange}"
 	      sleep(5) 
               @buy_client.transfer @sell_client
-              logger.info "Transferring bitcoins to #{@sell_client.exchange}"
+              binding.pry
+	      logger.info "Transferring bitcoins to #{@sell_client.exchange}"
 	      break
             end
             if attempt ==retries
@@ -206,6 +207,7 @@ module RbtcArbitrage
 	      logger.info "#{@options[:volume]} Bitcoins bought at #{@buy_client.exchange}"
               sleep(5)
 	      @buy_client.transfer @sell_client
+	      binding.pry
 	      logger.info "Transferring bitcoins to #{@sell_client.exchange}"
 	      break
 	    end
