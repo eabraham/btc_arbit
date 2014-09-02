@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gemspec
 
-gem 'bitstamp', :git => "https://github.com/kojnapp/bitstamp.git"
+gem 'bitstamp', :git => "https://github.com/kojnapp/bitstamp.git", :branch => "master"
 gem 'kraken_ruby'
 group :development do
   gem 'rspec'

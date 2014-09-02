@@ -1,6 +1,7 @@
 GIT
   remote: https://github.com/kojnapp/bitstamp.git
   revision: 7c75d81a534ff479fddb82050178d6c09a25629b
+  branch: master
   specs:
     bitstamp (0.4.0)
       activemodel (>= 3.1)
