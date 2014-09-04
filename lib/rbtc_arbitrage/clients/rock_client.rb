@@ -42,6 +42,10 @@ module RbtcArbitrage
         return [btc_balance, usd_balance]
       end
 
+      def fee
+        return @options["ROCK_FEE"] ? @options["ROCK_FEE"] : 0.01
+      end
+
       def interface
       end
 
@@ -93,7 +97,23 @@ module RbtcArbitrage
 
 	response = RestClient.post("https://www.therocktrading.com/api/place_order", params, {})
         r_json=JSON.parse(response)
-	return r_json["result"][0]["order_id"]
+	order_id =  r_json["result"][0]["order_id"]
+        (1..@options[:trade_retries]).each do |attempt|
+           if !open_orders.include?(order_id)
+             return true
+           end
+           if attempt == @options[:trade_retries]
+             cancel_order order_id
+             logger.info "failed to fill #{action} order at #{exchange}"
+             return false
+           else
+             logger.info "Attempt #{attempt}/#{options[:trade_retries]}: #{action} order #{order_id} still opening, waiting for close to"
+             sleep(1)
+           end
+        end
+        return false
+
+
       end
 
       # `action` is :buy or :sell

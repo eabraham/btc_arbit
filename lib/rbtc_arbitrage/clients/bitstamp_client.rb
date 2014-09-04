@@ -6,6 +6,7 @@ module RbtcArbitrage
       def balance
         return @balance if @balance
         balances = Bitstamp.balance
+        @fee = balances["fee"]
         @balance = [balances["btc_available"].to_f, balances["usd_available"].to_f]
       end
 
@@ -29,6 +30,12 @@ module RbtcArbitrage
 
       def cancel_order id
         Bitstamp.orders.find(id).cancel!
+      end
+
+      def fee
+        return @fee if !@fee
+        balance
+        return @fee
       end
 
       def price action
@@ -60,7 +67,21 @@ module RbtcArbitrage
           "amount" => @options[:volume]
         }
         response=Bitstamp.orders.send(action, bitstamp_options)
-	return response.send(:id)
+        order_id = response.send(:id)
+        (1..@options[:trade_retries]).each do |attempt|
+           if !open_orders.include?(order_id)
+             return true
+           end
+           if attempt == @options[:trade_retries]
+             cancel_order order_id
+             logger.info "failed to fill #{action} order at #{exchange}"
+             return false
+           else
+             logger.info "Attempt #{attempt}/#{options[:trade_retries]}: #{action} order #{order_id} still opening, waiting for close to"
+             sleep(1)
+           end
+        end
+	return false
       end
 
       def transfer other_client

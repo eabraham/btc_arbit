@@ -16,8 +16,7 @@ module RbtcArbitrage
       @options = {}
       set_key opts, :volume, 0.01
       set_key opts, :cutoff, 2
-
-      #@options[:cutoff] = -2
+      set_key opts, :trade_retries, 20
 
       default_logger = Logger.new("log.log")#Logger.new($stdout)
       default_logger.datetime_format = "%^b %e %Y %l:%M:%S %p %z"
@@ -163,8 +162,10 @@ module RbtcArbitrage
     private
 
     def calculate_profit
-      @paid = buyer[:price] * 1.005 * @options[:volume]
-      @received = seller[:price] * 0.995 * @options[:volume]
+      buyer_fee = if buyer[:fee] ? 1+buyer[:fee] : 1.005
+      seller_fee = if seller[:fee] ? 1-seller[:fee] : 0.995
+      @paid = buyer[:price] * buyer_fee * @options[:volume]
+      @received = seller[:price] * seller_fee * @options[:volume]
       @percent = ((@received/@paid - 1) * 100).round(2)
     end
 
@@ -173,52 +174,22 @@ module RbtcArbitrage
         logger.info "Not enough funds. Cancelling." if options[:verbose]
       else
         logger.info "Trading live!" if options[:verbose]
-        retries = 20
 	#perform action on exchnage with lowest volume first
 	#confirm that trade completes
 	#If trade does not complete in 10 seconds cancel order and prevent other side of arbitrage
 	if @buy_client.trade_volume <= @sell_client.trade_volume
-          id = @buy_client.buy
-	  (1..retries).each do |attempt|
-            if !@buy_client.open_orders.include?(id)
-	      logger.info "#{@options[:volume]} Bitcoins bought at #{@buy_client.exchange}"
-	      @sell_client.sell
-              logger.info "#{@options[:volume]} Bitcoins sold at #{@sell_client.exchange}"
-	      sleep(5) 
-              @buy_client.transfer @sell_client
-	      logger.info "Transferring bitcoins to #{@sell_client.exchange}"
-	      break
-            end
-            if attempt ==retries
-              @buy_client.cancel_order id
-	      logger.info "failed to fill buy order at #{@buy_client.exchange}"
-	    else
-	      logger.info "Attempt #{attempt}/#{retries}: buy order #{id} still opening, waiting for close to sell"
-              sleep(1)
-	    end
-	  end
+          executed = @buy_client.buy
+          executed = @sell_client.sell if executed
+          @buy_client.transfer @sell_client if executed
+
 	else
-          id = @sell_client.sell
-	  (1..retries).each do |attempt|
-            if !@sell_client.open_orders.include?(id)
-	      logger.info "#{@options[:volume]} Bitcoins sold at #{@sell_client.exchange}"
-              @buy_client.buy
-	      logger.info "#{@options[:volume]} Bitcoins bought at #{@buy_client.exchange}"
-              sleep(5)
-	      @buy_client.transfer @sell_client
-	      logger.info "Transferring bitcoins to #{@sell_client.exchange}"
-	      break
-	    end
-	    if attempt == retries
-              @sell_client.cancel_order id
-              logger.info "failed to fill buy order at #{@sell_client.exchange}"
-	    else
-	      logger.info "Attempt #{attempt}/#{retries}: sell order #{id} still opening, waiting for close to buy"
-              sleep(1)
-	    end
-	  end
+          executed = @sell_client.buy
+          executed = @buy_client.sell if executed
+          @buy_client.transfer @sell_client if executed
+
 	end
       end
     end
+
   end
 end
