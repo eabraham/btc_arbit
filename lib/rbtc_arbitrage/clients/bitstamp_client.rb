@@ -68,16 +68,21 @@ module RbtcArbitrage
         }
         response=Bitstamp.orders.send(action, bitstamp_options)
         order_id = response.send(:id)
-        (1..@options[:trade_retries]).each do |attempt|
+        if order_id.nil?
+          #exchange failed to accept order
+          return false
+        end
+        retries = @options[:trade_retries]
+        (1..retries).each do |attempt|
            if !open_orders.include?(order_id)
              return true
            end
-           if attempt == @options[:trade_retries]
+           if attempt == retries
              cancel_order order_id
              logger.info "failed to fill #{action} order at #{exchange}"
              return false
            else
-             logger.info "Attempt #{attempt}/#{options[:trade_retries]}: #{action} order #{order_id} still opening, waiting for close to"
+             logger.info "Attempt #{attempt}/#{retries}: #{action} order #{order_id} still opening, waiting for close to"
              sleep(1)
            end
         end
