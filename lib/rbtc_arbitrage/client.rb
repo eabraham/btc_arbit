@@ -12,6 +12,7 @@ module RbtcArbitrage
       set_key config, :logger, Logger.new(STDOUT)
       set_key config, :verbose, true
       set_key config, :live, false
+      set_key config, :trade_retries, 20
       self
     end
 
