@@ -162,8 +162,8 @@ module RbtcArbitrage
     private
 
     def calculate_profit
-      buyer_fee = if buyer[:fee] ? 1+buyer[:fee] : 1.005
-      seller_fee = if seller[:fee] ? 1-seller[:fee] : 0.995
+      buyer_fee = buyer[:fee] ? 1+buyer[:fee] : 1.005
+      seller_fee = seller[:fee] ? 1-seller[:fee] : 0.995
       @paid = buyer[:price] * buyer_fee * @options[:volume]
       @received = seller[:price] * seller_fee * @options[:volume]
       @percent = ((@received/@paid - 1) * 100).round(2)
