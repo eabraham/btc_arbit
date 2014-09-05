@@ -183,8 +183,8 @@ module RbtcArbitrage
           @buy_client.transfer @sell_client if executed
 
 	else
-          executed = @sell_client.buy
-          executed = @buy_client.sell if executed
+          executed = @sell_client.sell
+          executed = @buy_client.buy if executed
           @buy_client.transfer @sell_client if executed
 
 	end
