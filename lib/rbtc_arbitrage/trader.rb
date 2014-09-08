@@ -56,8 +56,6 @@ module RbtcArbitrage
         execute_trade if options[:live]
       end
 
-      notify
-
       if @options[:repeat]
         trade_again
       end
@@ -181,12 +179,12 @@ module RbtcArbitrage
           executed = @buy_client.buy
           executed = @sell_client.sell if executed
           @buy_client.transfer @sell_client if executed
-
+          notify if executed
 	else
           executed = @sell_client.sell
           executed = @buy_client.buy if executed
           @buy_client.transfer @sell_client if executed
-
+          notify if executed
 	end
       end
     end
